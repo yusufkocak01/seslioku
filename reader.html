@@ -60,11 +60,11 @@
 <body>
 
     <div class="audio-player-box">
-        <button id="btn-play-pause" class="audio-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+        <button id="btn-play-pause" class="audio-btn">
             <svg id="play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
             </svg>
-            <span id="btn-text">Metin Bekleniyor...</span>
+            <span id="btn-text">Haberi Dinle</span>
         </button>
 
         <button id="btn-stop" class="audio-btn secondary" style="display: none;">
@@ -91,31 +91,31 @@
 
         if (!('speechSynthesis' in window)) {
             statusText.innerHTML = '<span class="no-text-warning">Tarayıcınız sesli okumayı desteklemiyor.</span>';
+            btnPlayPause.disabled = true;
         }
 
-        // 1. Haber sitenizden gelen metni yakalayan kod:
-        window.addEventListener('message', function (event) {
-            // Sadece içinde text veya title olan mesajları kabul et
-            if (event.data && (event.data.text || event.data.title)) {
-                const titleText = event.data.title || '';
-                const bodyText = event.data.text || '';
+        // 1. Veriyi DOĞRUDAN window.name içinden al
+        try {
+            if (window.name) {
+                const cozulenVeri = decodeURIComponent(window.name);
+                const veriObjesi = JSON.parse(cozulenVeri);
+                const titleText = veriObjesi.title || '';
+                const bodyText = veriObjesi.text || '';
                 fullText = (titleText + '. ' + bodyText).trim();
-                
-                // Metin geldi, butonu aktif et!
-                btnPlayPause.disabled = false;
-                btnPlayPause.style.opacity = '1';
-                btnPlayPause.style.cursor = 'pointer';
-                btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
-                statusText.innerHTML = ''; 
-                
-                if (synth && synth.speaking) {
-                    synth.cancel();
-                    resetUI();
-                }
             }
-        });
+        } catch (e) {
+            console.error("Metin yüklenemedi:", e);
+        }
 
-        // 2. Play butonuna basıldığında okutma işlemi:
+        // Eğer metin başarıyla alındıysa uyarıyı temizle, alınamadıysa butonu kitle
+        if (!fullText) {
+            btnPlayPause.disabled = true;
+            btnPlayPause.style.opacity = '0.5';
+            btnPlayPause.style.cursor = 'not-allowed';
+            statusText.innerHTML = '<span class="no-text-warning">Okunacak metin bulunamadı.</span>';
+        }
+
+        // 2. Oynatma İşlevleri
         btnPlayPause.addEventListener('click', function () {
             if (!fullText) return;
 
