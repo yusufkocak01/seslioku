@@ -64,7 +64,7 @@
             <svg id="play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
             </svg>
-            <span id="btn-text">Bağlanıyor...</span>
+            <span id="btn-text">Haber Çekiliyor...</span>
         </button>
 
         <button id="btn-stop" class="audio-btn secondary" style="display: none;">
@@ -93,29 +93,52 @@
             statusText.innerHTML = '<span class="no-text-warning">Tarayıcınız sesli okumayı desteklemiyor.</span>';
         }
 
-        // HABER SİTESİNDEN GELEN METNİ YAKALA
-        window.addEventListener('message', function (event) {
-            if (event.data && (event.data.text || event.data.title)) {
-                const titleText = event.data.title || '';
-                const bodyText = event.data.text || '';
-                fullText = (titleText + '. ' + bodyText).trim();
-                
-                if (fullText.length > 5) {
-                    btnPlayPause.disabled = false;
-                    btnPlayPause.style.opacity = '1';
-                    btnPlayPause.style.cursor = 'pointer';
-                    btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
-                    statusText.innerHTML = ''; 
-                }
-                
-                if (synth && synth.speaking) {
-                    synth.cancel();
-                    resetUI();
-                }
-            }
-        });
+        // 1. URL PARAMETRESİNDEN HABER LİNKİNİ AL
+        const urlParams = new URLSearchParams(window.location.search);
+        const haberUrl = urlParams.get('url');
 
-        // OYNATMA İŞLEVLERİ
+        // 2. HABER LİNKİNE ARKA PLANDA BAĞLAN VE METNİ ÇEK
+        if (haberUrl) {
+            fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(haberUrl))
+                .then(response => {
+                    if (response.ok) return response.json();
+                    throw new Error('Ağ yanıtı hatalı.');
+                })
+                .then(data => {
+                    // HTML içeriğini ayrıştır
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, 'text/html');
+                    
+                    // Sizin sitenizin yapısına göre başlık ve metni bul
+                    const baslik = doc.querySelector('h1') ? doc.querySelector('h1').innerText : '';
+                    const detayDiv = doc.querySelector('.detay') || doc.querySelector('[property="articleBody"]');
+                    
+                    if (detayDiv) {
+                        // Sadece düz metni al, HTML etiketlerinden temizle
+                        const metin = detayDiv.innerText;
+                        fullText = (baslik + '. ' + metin).trim();
+                        
+                        if (fullText.length > 10) {
+                            btnPlayPause.disabled = false;
+                            btnPlayPause.style.opacity = '1';
+                            btnPlayPause.style.cursor = 'pointer';
+                            btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
+                        } else {
+                            statusText.innerHTML = '<span class="no-text-warning">Haber metni bulunamadı.</span>';
+                        }
+                    } else {
+                        statusText.innerHTML = '<span class="no-text-warning">Haber yapısı okunamadı.</span>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Haber çekme hatası:', error);
+                    statusText.innerHTML = '<span class="no-text-warning">İçerik yüklenirken hata oluştu.</span>';
+                });
+        } else {
+            statusText.innerHTML = '<span class="no-text-warning">Haber adresi alınamadı.</span>';
+        }
+
+        // 3. OYNATMA İŞLEVLERİ
         btnPlayPause.addEventListener('click', function () {
             if (!fullText) return;
 
