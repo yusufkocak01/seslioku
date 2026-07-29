@@ -64,7 +64,7 @@
             <svg id="play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
             </svg>
-            <span id="btn-text">Bağlanıyor...</span>
+            <span id="btn-text">Metin Bekleniyor...</span>
         </button>
 
         <button id="btn-stop" class="audio-btn secondary" style="display: none;">
@@ -74,7 +74,7 @@
             Durdur
         </button>
 
-        <span id="audio-status" class="audio-status"><span class="no-text-warning">İçerik bekleniyor...</span></span>
+        <span id="audio-status" class="audio-status"></span>
     </div>
 
     <script>
@@ -93,19 +93,20 @@
             statusText.innerHTML = '<span class="no-text-warning">Tarayıcınız sesli okumayı desteklemiyor.</span>';
         }
 
-        // Ana sayfadan gelen metni dinle
+        // 1. Haber sitenizden gelen metni yakalayan kod:
         window.addEventListener('message', function (event) {
+            // Sadece içinde text veya title olan mesajları kabul et
             if (event.data && (event.data.text || event.data.title)) {
                 const titleText = event.data.title || '';
                 const bodyText = event.data.text || '';
                 fullText = (titleText + '. ' + bodyText).trim();
                 
-                // Metin başarıyla geldi, butonu aktif et
+                // Metin geldi, butonu aktif et!
                 btnPlayPause.disabled = false;
                 btnPlayPause.style.opacity = '1';
                 btnPlayPause.style.cursor = 'pointer';
                 btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
-                statusText.innerHTML = ''; // Uyarıyı kaldır
+                statusText.innerHTML = ''; 
                 
                 if (synth && synth.speaking) {
                     synth.cancel();
@@ -114,11 +115,7 @@
             }
         });
 
-        // İframe tamamen yüklendiğinde ana sayfaya "Ben hazırım" mesajı gönder
-        window.onload = function() {
-            window.parent.postMessage({ status: 'READY' }, '*');
-        };
-
+        // 2. Play butonuna basıldığında okutma işlemi:
         btnPlayPause.addEventListener('click', function () {
             if (!fullText) return;
 
