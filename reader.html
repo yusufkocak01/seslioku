@@ -79,9 +79,7 @@
 
     <script>
         // ------------------------------------------------------------------
-        // METİN KAYNAĞI:
-        // 1. Önce URL parametreleri (title & text) kontrol edilir.
-        // 2. Ana sayfadan postMessage ile gelen uzun veri kontrol edilir.
+        // METİN KAYNAĞI
         // ------------------------------------------------------------------
         function getParam(name) {
             const params = new URLSearchParams(window.location.search);
@@ -102,22 +100,6 @@
         const btnStop = document.getElementById('btn-stop');
         const statusText = document.getElementById('audio-status');
 
-        function checkTextAvailability() {
-            if (!fullText) {
-                statusText.innerHTML = '<span class="no-text-warning">Okunacak metin bekleniyor...</span>';
-                btnPlayPause.disabled = true;
-                btnPlayPause.style.opacity = '0.5';
-                btnPlayPause.style.cursor = 'not-allowed';
-            } else {
-                statusText.innerHTML = '';
-                btnPlayPause.disabled = false;
-                btnPlayPause.style.opacity = '1';
-                btnPlayPause.style.cursor = 'pointer';
-            }
-        }
-
-        checkTextAvailability();
-
         if (!('speechSynthesis' in window)) {
             statusText.innerHTML = '<span class="no-text-warning">Tarayıcınız sesli okumayı desteklemiyor.</span>';
             btnPlayPause.disabled = true;
@@ -130,18 +112,19 @@
                 bodyText = event.data.text || '';
                 fullText = (titleText + '. ' + bodyText).trim();
                 
-                // Eğer synth çalıyorsa durdur
                 if (synth && synth.speaking) {
                     synth.cancel();
                     resetUI();
                 }
-                
-                checkTextAvailability();
             }
         });
 
         btnPlayPause.addEventListener('click', function () {
-            if (!fullText) return;
+            // Eğer buton tıklandığında hala metin yüklenmemişse kullanıcıyı bilgilendir
+            if (!fullText) {
+                statusText.innerHTML = '<span class="no-text-warning">Okunacak metin henüz yüklenemedi.</span>';
+                return;
+            }
 
             if (synth.paused) {
                 synth.resume();
