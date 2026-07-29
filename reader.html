@@ -1,171 +1,84 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sesli Okuma</title>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+        }
 
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Haber Detayı - Sesli Okuma Entegrasyonu</title>
+        .audio-player-box {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background-color: #f1f5f9;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
 
-<!-- FontAwesome & Alpine JS & Tailwind CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+        .audio-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
 
-<style>
-  [x-cloak] { display: none !important; }
-  
-  /* Sesli Okuma Butonları İçin Özel CSS (Sizin tasarımınız) */
-  .audio-player-box {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background-color: #f1f5f9;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border-left: 4px solid #2563eb;
-      margin: 16px 24px;
-  }
-  @media (max-width: 768px) {
-      .audio-player-box { margin: 16px; }
-  }
-  .audio-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-  }
-  .audio-btn:hover { background-color: #1d4ed8; }
-  .audio-btn:active { transform: scale(0.98); }
-  .audio-btn.secondary { background-color: #64748b; }
-  .audio-btn.secondary:hover { background-color: #475569; }
-  .audio-status {
-      font-size: 13px;
-      color: #475569;
-      font-weight: 500;
-  }
-  .no-text-warning {
-      font-size: 13px;
-      color: #b91c1c;
-  }
-</style>
+        .audio-btn:hover { background-color: #1d4ed8; }
+        .audio-btn:active { transform: scale(0.98); }
+        .audio-btn.secondary { background-color: #64748b; }
+        .audio-btn.secondary:hover { background-color: #475569; }
 
+        .audio-status {
+            font-size: 13px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .no-text-warning {
+            font-size: 13px;
+            color: #b91c1c;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-300">
+<body>
 
-<!-- Üst Bar / Navbar Mockup -->
-<header class="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
-    <div class="font-bold text-xl text-red-600">HABER PORTALI</div>
-    <div class="flex items-center gap-4">
-        <button class="p-2 bg-gray-200 dark:bg-gray-700 rounded"><i class="fas font-solid fa-moon"></i></button>
-        <button class="p-2 bg-gray-200 dark:bg-gray-700 rounded"><i class="fas fa-bars"></i></button>
+    <div class="audio-player-box">
+        <button id="btn-play-pause" class="audio-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+            <svg id="play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+            </svg>
+            <span id="btn-text">Bağlanıyor...</span>
+        </button>
+
+        <button id="btn-stop" class="audio-btn secondary" style="display: none;">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/>
+            </svg>
+            Durdur
+        </button>
+
+        <span id="audio-status" class="audio-status"><span class="no-text-warning">İçerik bekleniyor...</span></span>
     </div>
-</header>
 
-<main class="max-w-4xl mx-auto my-6 p-4">
-
-    <!-- Makale Kapsayıcısı -->
-    <article class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-        
-        <!-- Başlık & Meta Bilgileri -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 class="text-2xl md:text-3xl font-bold mb-4 text-gray-900 dark:text-white" id="haber-baslik">
-                Örnek Haber Başlığı: Türkiye'de Yenilenebilir Enerji Yatırımları Artıyor
-            </h1>
-            
-            <!-- Araç Çubuğu: Yazı Boyutu & Paylaşım -->
-            <div class="flex flex-wrap items-center justify-between gap-4 py-2">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-semibold text-gray-500">Metin Boyutu:</span>
-                    <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm font-bold">A-</button>
-                    <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm font-bold">A+</button>
-                </div>
-
-                <div class="flex items-center space-x-3 text-lg">
-                    <a href="#" class="text-blue-600 hover:opacity-75"><i class="fab fa-facebook"></i></a>
-                    <a href="#" class="text-sky-400 hover:opacity-75"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="text-green-500 hover:opacity-75"><i class="fab fa-whatsapp"></i></a>
-                    <a href="#" class="text-blue-400 hover:opacity-75"><i class="fab fa-telegram"></i></a>
-                    <a href="#" class="text-blue-700 hover:opacity-75"><i class="fab fa-linkedin"></i></a>
-                </div>
-            </div>
-        </div>
-
-        <!-- DOĞRUDAN EKLENMİŞ SESLİ OKUMA BUTONLARI -->
-        <div class="audio-player-box">
-            <button id="btn-play-pause" class="audio-btn">
-                <svg id="play-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
-                </svg>
-                <span id="btn-text">Haberi Dinle</span>
-            </button>
-
-            <button id="btn-stop" class="audio-btn secondary" style="display: none;">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/>
-                </svg>
-                Durdur
-            </button>
-
-            <span id="audio-status" class="audio-status"></span>
-        </div>
-
-        <!-- Makale İçeriği (Haber Detay Metni) -->
-        <div class="post-body px-6 md:px-4 detay text-gray-700 dark:text-gray-300 leading-relaxed space-y-4 py-4" property="articleBody">
-            <p>
-                Son yıllarda sürdürülebilir enerji kaynaklarına yapılan yatırımlar ivme kazandı. Rüzgar ve güneş enerjisi santrallerinin kapasitesi, ulusal şebekeye önemli katkılar sağlamaya devam ediyor.
-            </p>
-            <p>
-                Uzmanlar, yeşil dönüşüm projelerinin hem çevresel etkileri azalttığını hem de uzun vadede enerji bağımsızlığını güçlendirdiğini vurguluyor. Yerli ve yabancı yatırımcıların bu alandaki ilgisi her geçen gün artış gösteriyor.
-            </p>
-            <p>
-                Sanayi tesislerinde sıfır emisyon hedefleri doğrultusunda yapılan teknolojik modernizasyonlar, üretim süreçlerini daha çevreci hale getirirken maliyet avantajları da sunuyor.
-            </p>
-            <p>
-                Gelecek dönemde depolama teknolojilerinin de gelişmesiyle birlikte yenilenebilir enerjinin toplam üretimdeki payının %60 seviyelerini aşması beklenmektedir.
-            </p>
-        </div>
-
-        <!-- Tepki Emojileri / Alt Etkileşim -->
-        <div class="p-6 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
-            <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Bu habere tepkiniz nedir?</h3>
-            <div class="flex gap-4">
-                <button class="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded shadow-sm hover:bg-gray-100">
-                    <span>👏</span> <span class="text-xs font-bold">12</span>
-                </button>
-                <button class="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded shadow-sm hover:bg-gray-100">
-                    <span>❤️</span> <span class="text-xs font-bold">24</span>
-                </button>
-                <button class="flex items-center space-x-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded shadow-sm hover:bg-gray-100">
-                    <span>😮</span> <span class="text-xs font-bold">5</span>
-                </button>
-            </div>
-        </div>
-
-    </article>
-
-</main>
-
-<!-- DOĞRUDAN ÇALIŞAN SESLİ OKUMA JAVASCRIPT KODU -->
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // İframe yerine metni doğrudan sayfa içindeki elementlerden çekiyoruz
-        const titleElement = document.getElementById('haber-baslik');
-        const bodyElement = document.querySelector('.detay');
-        
-        const titleText = titleElement ? titleElement.innerText : '';
-        const bodyText = bodyElement ? bodyElement.innerText : '';
-        const fullText = (titleText + '. ' + bodyText).trim();
-
+    <script>
+        let fullText = "";
         let synth = window.speechSynthesis;
         let utterance = null;
 
@@ -176,17 +89,35 @@
         const btnStop = document.getElementById('btn-stop');
         const statusText = document.getElementById('audio-status');
 
-        if (!fullText) {
-            statusText.innerHTML = '<span class="no-text-warning">Okunacak metin bulunamadı.</span>';
-            btnPlayPause.disabled = true;
-            btnPlayPause.style.opacity = '0.5';
-            btnPlayPause.style.cursor = 'not-allowed';
-        }
-
         if (!('speechSynthesis' in window)) {
             statusText.innerHTML = '<span class="no-text-warning">Tarayıcınız sesli okumayı desteklemiyor.</span>';
-            btnPlayPause.disabled = true;
         }
+
+        // Ana sayfadan gelen metni dinle
+        window.addEventListener('message', function (event) {
+            if (event.data && (event.data.text || event.data.title)) {
+                const titleText = event.data.title || '';
+                const bodyText = event.data.text || '';
+                fullText = (titleText + '. ' + bodyText).trim();
+                
+                // Metin başarıyla geldi, butonu aktif et
+                btnPlayPause.disabled = false;
+                btnPlayPause.style.opacity = '1';
+                btnPlayPause.style.cursor = 'pointer';
+                btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
+                statusText.innerHTML = ''; // Uyarıyı kaldır
+                
+                if (synth && synth.speaking) {
+                    synth.cancel();
+                    resetUI();
+                }
+            }
+        });
+
+        // İframe tamamen yüklendiğinde ana sayfaya "Ben hazırım" mesajı gönder
+        window.onload = function() {
+            window.parent.postMessage({ status: 'READY' }, '*');
+        };
 
         btnPlayPause.addEventListener('click', function () {
             if (!fullText) return;
@@ -207,7 +138,7 @@
 
             utterance = new SpeechSynthesisUtterance(fullText);
             utterance.lang = 'tr-TR';
-            utterance.rate = 1.3;   // Okuma hızını ideal bir seviyeye çektim
+            utterance.rate = 1.3;
             utterance.pitch = 1.0;
 
             const voices = synth.getVoices();
@@ -232,7 +163,7 @@
         });
 
         function resetUI() {
-            btnPlayPause.innerHTML = playIcon + ' <span>Haberi Dinle</span>';
+            btnPlayPause.innerHTML = playIcon + ' <span id="btn-text">Haberi Dinle</span>';
             btnStop.style.display = 'none';
             statusText.innerText = '';
         }
@@ -240,15 +171,6 @@
         window.addEventListener('beforeunload', function () {
             synth.cancel();
         });
-        
-        // Ses paketlerinin yüklenmesi bazı tarayıcılarda gecikebilir, bu tetikleyici onu garantiler
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = function() {
-                synth.getVoices();
-            };
-        }
-    });
-</script>
-
+    </script>
 </body>
 </html>
